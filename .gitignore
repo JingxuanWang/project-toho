@@ -1,0 +1,15 @@
+.DS_Store
+/Library/
+/Temp/
+/obj/
+/Doc/
+/[Bb]uild/
+
+*.csproj
+*.sln
+*.userprefs
+*.unityproj
+*.apk
+
+# *.pidb
+Assets/NGUI*
