@@ -2,19 +2,28 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class BulletSpawner : MonoBehaviour
+public class StageManager : MonoBehaviour
 {
-	[SerializeField]
-	private float spawnInterval = 1.0f;
+	private bool gameOver = false;
+
+	private float startTime = 0f;
+	private float elapsedTime = 0f;
 
 	[SerializeField]
-	private int maximumBullets = 64;
+	private int hp = 1;
+
+	[SerializeField]
+	private float spawnInterval = 0.2f;
+
+	[SerializeField]
+	private int maximumBullets = 128;
 
 	[SerializeField]
 	private Rect gameRegion = new Rect(-5f, -5f, 10f, 10f);
-	public Rect GameRegion 
+
+	public Rect GameRegion
 	{   
-		get 
+		get
 		{
 			return this.gameRegion;
 		}
@@ -22,6 +31,9 @@ public class BulletSpawner : MonoBehaviour
 
 	[SerializeField]
 	private GameObject bulletPrefab;
+
+	[SerializeField]
+	private GameObject playerPrefab;
 
 	[SerializeField]
 	private float playerTargetingRate = 0.1f;
@@ -36,19 +48,35 @@ public class BulletSpawner : MonoBehaviour
 	// Use this for initialization
 	void Start()
 	{
-		this.player = GameObject.Find("player");
-
 		this.adjustGameRegion();
 
+		this.Restart();
 	}
-	
+
+	void OnGUI()
+	{
+		GUILayout.Label("Time: " + this.elapsedTime);
+		if (gameOver)
+		{
+			GUILayout.Label("Game Over");
+			if (GUILayout.Button("Try Again?"))
+			{
+				this.Restart();
+			}
+		}
+		else
+		{
+			this.elapsedTime = Time.realtimeSinceStartup - this.startTime;
+		}
+	}
+
 	// Update is called once per frame
 	void Update()
 	{
-		if (Time.time - this.lastSpawnAt > this.spawnInterval && 
+		if (Time.time - this.lastSpawnAt > this.spawnInterval &&
 		    bulletList.Count < this.maximumBullets)
 		{
-			spawn();
+			SpawnBullet();
 			this.lastSpawnAt = Time.time;
 		}
 
@@ -56,7 +84,24 @@ public class BulletSpawner : MonoBehaviour
 		ResetTargetPoint();
 	}
 
-	void spawn()
+	private void Restart()
+	{
+		foreach (BulletController bullet in this.bulletList)
+		{
+			Destroy(bullet.gameObject);
+		}
+
+		this.bulletList.Clear();
+
+
+		this.SpawnPlayer();
+
+		this.startTime = Time.realtimeSinceStartup;
+		this.elapsedTime = 0f;
+		this.gameOver = false;
+	}
+
+	private void SpawnBullet()
 	{
 		// set initial point
 		GameObject bullet = Instantiate(this.bulletPrefab) as GameObject;
@@ -69,15 +114,30 @@ public class BulletSpawner : MonoBehaviour
 		this.bulletList.Add(bulletController);
 	}
 
+	private void SpawnPlayer()
+	{
+		this.player = Instantiate(this.playerPrefab) as GameObject;
+	}
+
+	public void PlayerHit()
+	{
+		this.hp--;
+
+		if (this.hp <= 0)
+		{
+			this.gameOver = true;
+		}
+	}
+
 	void ResetTargetPoint()
 	{
-		foreach(BulletController bc in bulletList)
+		foreach (BulletController bc in bulletList)
 		{
 			// if outside the border the reset the target point
-//			if(!this.gameRegion.IsInside(bc.transform.position))
-//			{
-//				ResetBullet(bc.gameObject);
-//			}
+			if(!this.gameRegion.Contains(bc.transform.position))
+			{
+				ResetBullet(bc.gameObject);
+			}
 		}
 	}
 
@@ -85,13 +145,13 @@ public class BulletSpawner : MonoBehaviour
 	{
 		bullet.transform.position = 
 			new Vector3(
-				Random.Range(this.gameRegion.xMin, this.gameRegion.xMax),
-				Random.Range(this.gameRegion.yMin, this.gameRegion.yMax),
-				0);
+			Random.Range(this.gameRegion.xMin, this.gameRegion.xMax),
+			Random.Range(this.gameRegion.yMin, this.gameRegion.yMax),
+			0);
 		
 		// set target point
 		BulletController bulletController = bullet.GetComponent<BulletController>();
-		if (Random.Range(0.0f, 1.0f) < this.playerTargetingRate)
+		if (Random.Range(0.0f, 1.0f) < this.playerTargetingRate && this.player != null)
 		{
 			bulletController.TargetPoint = this.player.transform.position;
 		}
@@ -99,9 +159,9 @@ public class BulletSpawner : MonoBehaviour
 		{
 			bulletController.TargetPoint =
 				new Vector3(
-					Random.Range(this.gameRegion.xMin, this.gameRegion.xMax),
-					Random.Range(this.gameRegion.yMin, this.gameRegion.yMax),
-					0);
+				Random.Range(this.gameRegion.xMin, this.gameRegion.xMax),
+				Random.Range(this.gameRegion.yMin, this.gameRegion.yMax),
+				0);
 		}
 		return bulletController;
 	}

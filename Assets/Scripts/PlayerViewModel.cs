@@ -3,16 +3,12 @@ using System.Collections;
 
 public class PlayerViewModel : MonoBehaviour
 {
-	[SerializeField]
-	private int hp = 12;
+	private StageManager stageManager;
 
 	private Animator animator;
 
 	private GameObject borderBack;
 	private GameObject borderFront;
-
-	[SerializeField]
-	private BulletSpawner bulletSpawner;
 
 	[SerializeField]
 	private float maxSpeed = 0.1f;
@@ -24,6 +20,13 @@ public class PlayerViewModel : MonoBehaviour
 	// Use this for initialization
 	void Start()
 	{
+		GameObject stageManagerObject = GameObject.Find("StageManager");
+		this.stageManager = stageManagerObject.GetComponent<StageManager>();
+		if (this.stageManager == null)
+		{
+			Debug.LogError("Can not find stage manager");
+		}
+
 		this.borderBack = transform.Find("BorderBack").gameObject;
 		this.borderFront = transform.Find("BorderFront").gameObject;
 
@@ -33,14 +36,8 @@ public class PlayerViewModel : MonoBehaviour
 		this.animator = GetComponent<Animator>() as Animator;
 
 		this.prevPosition = transform.position;
-
-		if (this.bulletSpawner == null)
-		{
-			GameObject bulletSpawnerObject = GameObject.Find("BulletSpawner");
-			this.bulletSpawner = bulletSpawnerObject.GetComponent<BulletSpawner>() as BulletSpawner;
-		}
 	}
-	
+
 	// Update is called once per frame
 	void Update()
 	{
@@ -49,7 +46,7 @@ public class PlayerViewModel : MonoBehaviour
 
 		// rotate borders if enabled
 		if (this.borderBack.renderer.enabled == true &&
-		    this.borderFront.renderer.enabled == true) 
+		    this.borderFront.renderer.enabled == true)
 		{
 			this.borderBack.transform.Rotate(new Vector3(0, 0, 1f));
 			this.borderFront.transform.Rotate(new Vector3(0, 0, -1f));
@@ -63,7 +60,7 @@ public class PlayerViewModel : MonoBehaviour
 	{
 		float horizontal = Input.GetAxis("Horizontal");
 		float vertical = Input.GetAxis("Vertical");
-		
+
 		this.animator.SetFloat("Horizontal", horizontal);
 	
 		if (Input.GetKeyDown(KeyCode.LeftShift) && !this.isSlowMode)
@@ -75,21 +72,33 @@ public class PlayerViewModel : MonoBehaviour
 			slowModeOff();
 		}
 
+		if (horizontal > 0f)
+		{
+			horizontal = 1f;
+		}
+		else if (horizontal < 0f)
+		{
+			horizontal = -1f;
+		}
+
+		if (vertical > 0f)
+		{
+			vertical = 1f;
+		}
+		else if (vertical < 0f)
+		{
+			vertical = -1f;
+		}
+
 		this.safeMove(new Vector3(horizontal * this.maxSpeed, vertical * this.maxSpeed, 0));
 	}
 
 	void OnTriggerEnter2D(Collider2D other)
 	{
-		this.hp -= 1;
+		this.stageManager.ResetBullet(other.gameObject);
+		Destroy(this.gameObject);
 
-		this.bulletSpawner.ResetBullet(other.gameObject);
-		Debug.Log("Hit! hp => " + this.hp);
-		if (this.hp <= 0)
-		{
-			// game over
-			Debug.Log("Game Over!");
-			Destroy(this.gameObject);
-		}
+		this.stageManager.PlayerHit();
 	}
 
 	void slowModeOn()
